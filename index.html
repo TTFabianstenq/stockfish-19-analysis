@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stockfish 19 Analysis Board</title>
+  <link rel="stylesheet" href="chessboard-1.0.0.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="top-bar">
+      <div class="piece-tray" id="tray-top">
+        <!-- filled by JS -->
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="board-column">
+        <div class="eval-bar-container">
+          <div class="eval-bar" id="eval-bar">
+            <div class="eval-fill" id="eval-fill"></div>
+            <div class="eval-label" id="eval-label">0.0</div>
+          </div>
+        </div>
+        <div id="board"></div>
+      </div>
+
+      <aside class="side-panel">
+        <div class="engine-card">
+          <div class="engine-header">
+            <span>ENGINE ANALYSIS</span>
+            <span class="engine-badge">Stockfish 19</span>
+          </div>
+          <p class="engine-hint">Whose turn is it? Press the side that moves next to get its best move.</p>
+          <div class="turn-buttons">
+            <button id="btn-white" class="btn-turn">White to Move</button>
+            <button id="btn-black" class="btn-turn dark">Black to Move</button>
+          </div>
+          <div class="engine-output" id="engine-output">
+            <div class="status" id="engine-status">Ready</div>
+            <div class="best-move" id="best-move"></div>
+            <div class="pv" id="pv"></div>
+            <div class="depth-info" id="depth-info"></div>
+          </div>
+        </div>
+
+        <div class="controls-card">
+          <div class="castling-row">
+            <span class="label">CASTLING</span>
+            <div class="castling-toggles">
+              <button class="castle-btn active" data-castle="K" title="White kingside">K</button>
+              <button class="castle-btn active" data-castle="Q" title="White queenside">Q</button>
+              <button class="castle-btn active" data-castle="k" title="Black kingside">k</button>
+              <button class="castle-btn active" data-castle="q" title="Black queenside">q</button>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button id="btn-flip" class="btn-action">Flip</button>
+            <button id="btn-reset" class="btn-action">Reset</button>
+            <button id="btn-clear" class="btn-action">Clear</button>
+          </div>
+        </div>
+
+        <div class="fen-card">
+          <label>FEN</label>
+          <input type="text" id="fen-input" readonly />
+          <button id="btn-copy-fen" class="btn-small">Copy</button>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="bottom-bar">
+      <div class="piece-tray" id="tray-bottom">
+        <!-- filled by JS -->
+      </div>
+    </footer>
+  </div>
+
+  <script src="chess.js"></script>
+  <script src="chessboard-1.0.0.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
