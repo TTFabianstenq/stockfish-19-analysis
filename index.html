@@ -3,79 +3,80 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stockfish 19 Analysis Board</title>
+  <title>Stockfish 19 · Analysis</title>
   <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://images.chesscomfiles.com" crossorigin />
 </head>
 <body>
   <div class="app">
-    <header class="top-bar">
+    <header class="tray tray-top">
       <div class="piece-tray" id="tray-top"></div>
     </header>
 
-    <main class="main">
-      <div class="board-column">
-        <div class="eval-bar-container">
+    <div class="workspace">
+      <div class="board-wrap">
+        <div class="eval-rail">
           <div class="eval-bar" id="eval-bar">
             <div class="eval-fill" id="eval-fill"></div>
-            <div class="eval-label" id="eval-label">0.0</div>
+            <span class="eval-label" id="eval-label">0.0</span>
           </div>
         </div>
-        <div id="board" style="width: 480px; max-width: 90vw;"></div>
+        <div id="board"></div>
       </div>
 
-      <aside class="side-panel">
-        <div class="engine-card">
-          <div class="engine-header">
-            <span>ENGINE ANALYSIS</span>
-            <span class="engine-badge">Stockfish 19</span>
+      <aside class="panel">
+        <section class="card engine-card">
+          <div class="card-head">
+            <span class="card-title">Engine Analysis</span>
+            <span class="badge">Stockfish 19</span>
           </div>
-          <p class="engine-hint">Whose turn is it? Press the side that moves next to get its best move.</p>
-          <div class="turn-buttons">
-            <button id="btn-white" class="btn-turn">White to Move</button>
-            <button id="btn-black" class="btn-turn dark">Black to Move</button>
+          <p class="hint">Set the position, then analyse the side to move.</p>
+          <div class="turn-row">
+            <button id="btn-white" class="btn btn-white" type="button">White to Move</button>
+            <button id="btn-black" class="btn btn-black" type="button">Black to Move</button>
           </div>
-          <div class="engine-output" id="engine-output">
+          <div class="engine-out">
             <div class="status" id="engine-status">Ready</div>
-            <div class="best-move" id="best-move"></div>
+            <div class="best" id="best-move"></div>
             <div class="pv" id="pv"></div>
-            <div class="depth-info" id="depth-info"></div>
+            <div class="meta" id="depth-info"></div>
           </div>
-        </div>
+        </section>
 
-        <div class="controls-card">
-          <div class="castling-row">
-            <span class="label">CASTLING</span>
-            <div class="castling-toggles">
-              <button class="castle-btn active" data-castle="K" title="White kingside">K</button>
-              <button class="castle-btn active" data-castle="Q" title="White queenside">Q</button>
-              <button class="castle-btn active" data-castle="k" title="Black kingside">k</button>
-              <button class="castle-btn active" data-castle="q" title="Black queenside">q</button>
+        <section class="card">
+          <div class="castling">
+            <span class="label">Castling</span>
+            <div class="castle-group">
+              <button class="castle active" data-castle="K" type="button" title="White O-O">K</button>
+              <button class="castle active" data-castle="Q" type="button" title="White O-O-O">Q</button>
+              <button class="castle active" data-castle="k" type="button" title="Black O-O">k</button>
+              <button class="castle active" data-castle="q" type="button" title="Black O-O-O">q</button>
             </div>
           </div>
-
-          <div class="action-row">
-            <button id="btn-flip" class="btn-action">Flip</button>
-            <button id="btn-reset" class="btn-action">Reset</button>
-            <button id="btn-clear" class="btn-action">Clear</button>
+          <div class="actions">
+            <button id="btn-flip" class="btn btn-ghost" type="button">Flip</button>
+            <button id="btn-reset" class="btn btn-ghost" type="button">Reset</button>
+            <button id="btn-clear" class="btn btn-ghost" type="button">Clear</button>
           </div>
-        </div>
+        </section>
 
-        <div class="fen-card">
-          <label>FEN</label>
-          <input type="text" id="fen-input" readonly />
-          <button id="btn-copy-fen" class="btn-small">Copy</button>
-        </div>
+        <section class="card fen-card">
+          <label class="label" for="fen-input">FEN</label>
+          <div class="fen-row">
+            <input type="text" id="fen-input" readonly spellcheck="false" />
+            <button id="btn-copy-fen" class="btn btn-ghost btn-sm" type="button">Copy</button>
+          </div>
+        </section>
       </aside>
-    </main>
+    </div>
 
-    <footer class="bottom-bar">
+    <footer class="tray tray-bottom">
       <div class="piece-tray" id="tray-bottom"></div>
     </footer>
   </div>
 
-  <!-- jQuery is required by chessboard.js -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
   <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
   <script src="app.js"></script>
