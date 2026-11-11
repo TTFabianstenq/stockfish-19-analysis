@@ -1,7 +1,6 @@
 (function () {
   "use strict";
 
-  // ---------- State ----------
   let game = new Chess();
   let board = null;
   let selectedPiece = null;
@@ -9,7 +8,6 @@
   let castling = { K: true, Q: true, k: true, q: true };
   let engine = null;
   let analysing = false;
-  let currentEval = 0;
 
   const $ = (id) => document.getElementById(id);
   const fenInput = $("fen-input");
@@ -24,13 +22,14 @@
 
   const WHITE_PIECES = ["wK", "wQ", "wR", "wB", "wN", "wP"];
   const BLACK_PIECES = ["bK", "bQ", "bR", "bB", "bN", "bP"];
+  const PIECE_CDN = "https://raw.githubusercontent.com/oakmac/chessboardjs/master/website/img/chesspieces/wikipedia/";
 
   function buildTray(containerId, pieces) {
     const el = $(containerId);
     el.innerHTML = "";
     pieces.forEach((p) => {
       const img = document.createElement("img");
-      img.src = `img/chesspieces/wikipedia/${p}.png`;
+      img.src = PIECE_CDN + p + ".png";
       img.alt = p;
       img.dataset.piece = p;
       img.draggable = true;
@@ -56,19 +55,16 @@
   buildTray("tray-top", BLACK_PIECES);
   buildTray("tray-bottom", WHITE_PIECES);
 
-  function onDragStart() { return true; }
-  function onSnapEnd() { syncGameFromBoard(); }
-
   board = Chessboard("board", {
     position: "start",
     orientation: orientation,
     draggable: true,
     dropOffBoard: "trash",
     sparePieces: false,
-    pieceTheme: "img/chesspieces/wikipedia/{piece}.png",
-    onDragStart: onDragStart,
+    pieceTheme: PIECE_CDN + "{piece}.png",
+    onDragStart: function () { return true; },
     onDrop: function () { return true; },
-    onSnapEnd: onSnapEnd,
+    onSnapEnd: function () { syncGameFromBoard(); },
   });
 
   document.getElementById("board").addEventListener("click", (e) => {
@@ -160,7 +156,6 @@
   }
 
   function updateEvalBar(cp) {
-    currentEval = cp;
     let pct = 50 + (cp / 20);
     pct = Math.max(2, Math.min(98, pct));
     evalFill.style.height = pct + "%";
@@ -222,10 +217,7 @@
 
   function formatMove(uci) {
     if (!uci || uci.length < 4) return uci;
-    const from = uci.slice(0, 2);
-    const to = uci.slice(2, 4);
-    const promo = uci.length > 4 ? "=" + uci[4].toUpperCase() : "";
-    return from + " → " + to + promo;
+    return uci.slice(0, 2) + " → " + uci.slice(2, 4) + (uci.length > 4 ? "=" + uci[4].toUpperCase() : "");
   }
 
   function parseInfo(line) {
@@ -237,18 +229,12 @@
       depthInfo.textContent = `Depth ${depthMatch[1]}` + (nodesMatch ? ` · ${Number(nodesMatch[1]).toLocaleString()} nodes` : "");
     }
     if (scoreMatch) {
-      let cp = 0;
-      if (scoreMatch[1] === "cp") cp = parseInt(scoreMatch[2], 10);
-      else {
-        const mateIn = parseInt(scoreMatch[2], 10);
-        cp = mateIn > 0 ? 10000 - mateIn : -10000 - mateIn;
-      }
+      let cp = scoreMatch[1] === "cp" ? parseInt(scoreMatch[2], 10) : (parseInt(scoreMatch[2], 10) > 0 ? 10000 : -10000);
       if (game.turn() === "b") cp = -cp;
       updateEvalBar(cp);
     }
     if (pvMatch) {
-      const moves = pvMatch[1].trim().split(/\s+/).slice(0, 8);
-      pvEl.textContent = moves.map(formatMove).join("  ");
+      pvEl.textContent = pvMatch[1].trim().split(/\s+/).slice(0, 8).map(formatMove).join("  ");
     }
   }
 

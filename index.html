@@ -4,15 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stockfish 19 Analysis Board</title>
-  <link rel="stylesheet" href="chessboard-1.0.0.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app">
     <header class="top-bar">
-      <div class="piece-tray" id="tray-top">
-        <!-- filled by JS -->
-      </div>
+      <div class="piece-tray" id="tray-top"></div>
     </header>
 
     <main class="main">
@@ -72,14 +70,12 @@
     </main>
 
     <footer class="bottom-bar">
-      <div class="piece-tray" id="tray-bottom">
-        <!-- filled by JS -->
-      </div>
+      <div class="piece-tray" id="tray-bottom"></div>
     </footer>
   </div>
 
-  <script src="chess.js"></script>
-  <script src="chessboard-1.0.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
