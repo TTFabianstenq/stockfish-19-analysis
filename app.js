@@ -8,6 +8,7 @@
   let castling = { K: true, Q: true, k: true, q: true };
   let engine = null;
   let analysing = false;
+  let syncTimer = null;
 
   const $ = (id) => document.getElementById(id);
   const fenInput = $("fen-input");
@@ -20,40 +21,50 @@
   const btnWhite = $("btn-white");
   const btnBlack = $("btn-black");
 
-  const WHITE_PIECES = ["wK", "wQ", "wR", "wB", "wN", "wP"];
-  const BLACK_PIECES = ["bK", "bQ", "bR", "bB", "bN", "bP"];
-  const PIECE_CDN = "https://raw.githubusercontent.com/oakmac/chessboardjs/master/website/img/chesspieces/wikipedia/";
+  const MAP = {
+    wK: "wk", wQ: "wq", wR: "wr", wB: "wb", wN: "wn", wP: "wp",
+    bK: "bk", bQ: "bq", bR: "br", bB: "bb", bN: "bn", bP: "bp",
+  };
+  const theme = (piece) =>
+    "https://images.chesscomfiles.com/chess-themes/pieces/neo/150/" + MAP[piece] + ".png";
 
-  function buildTray(containerId, pieces) {
-    const el = $(containerId);
+  const WHITE = ["wK", "wQ", "wR", "wB", "wN", "wP"];
+  const BLACK = ["bK", "bQ", "bR", "bB", "bN", "bP"];
+
+  [...WHITE, ...BLACK].forEach((p) => {
+    const img = new Image();
+    img.src = theme(p);
+  });
+
+  function buildTray(id, pieces) {
+    const el = $(id);
     el.innerHTML = "";
     pieces.forEach((p) => {
       const img = document.createElement("img");
-      img.src = PIECE_CDN + p + ".png";
+      img.src = theme(p);
       img.alt = p;
       img.dataset.piece = p;
       img.draggable = true;
-      img.addEventListener("click", () => selectPiece(p, img));
+      img.addEventListener("click", () => {
+        document.querySelectorAll(".piece-tray img").forEach((i) => i.classList.remove("selected"));
+        if (selectedPiece === p) {
+          selectedPiece = null;
+          return;
+        }
+        selectedPiece = p;
+        img.classList.add("selected");
+      });
       img.addEventListener("dragstart", (e) => {
         selectedPiece = p;
         e.dataTransfer.setData("text/plain", p);
+        e.dataTransfer.effectAllowed = "copy";
       });
       el.appendChild(img);
     });
   }
 
-  function selectPiece(piece, imgEl) {
-    document.querySelectorAll(".piece-tray img").forEach((i) => i.classList.remove("selected"));
-    if (selectedPiece === piece) {
-      selectedPiece = null;
-      return;
-    }
-    selectedPiece = piece;
-    imgEl.classList.add("selected");
-  }
-
-  buildTray("tray-top", BLACK_PIECES);
-  buildTray("tray-bottom", WHITE_PIECES);
+  buildTray("tray-top", BLACK);
+  buildTray("tray-bottom", WHITE);
 
   board = Chessboard("board", {
     position: "start",
@@ -61,16 +72,26 @@
     draggable: true,
     dropOffBoard: "trash",
     sparePieces: false,
-    pieceTheme: PIECE_CDN + "{piece}.png",
+    pieceTheme: theme,
+    appearSpeed: 0,
+    moveSpeed: 60,
+    snapbackSpeed: 80,
+    snapSpeed: 50,
+    trashSpeed: 40,
     onDragStart: function () { return true; },
     onDrop: function () { return true; },
-    onSnapEnd: function () { syncGameFromBoard(); },
+    onSnapEnd: function () {
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => syncGameFromBoard(), 30);
+    },
   });
 
   document.getElementById("board").addEventListener("click", (e) => {
-    const square = e.target.closest("[data-square]");
-    if (!square || !selectedPiece) return;
-    const sq = square.dataset.square;
+    if (!selectedPiece) return;
+    const sqEl = e.target.closest("[data-square]");
+    if (!sqEl) return;
+    const sq = sqEl.getAttribute("data-square");
+    if (!sq) return;
     const pos = board.position();
     if (pos[sq] === selectedPiece) delete pos[sq];
     else pos[sq] = selectedPiece;
@@ -78,7 +99,7 @@
     syncGameFromBoard();
   });
 
-  function buildCastlingString() {
+  function buildCastling() {
     let s = "";
     if (castling.K) s += "K";
     if (castling.Q) s += "Q";
@@ -87,27 +108,25 @@
     return s || "-";
   }
 
-  function syncGameFromBoard(sideToMove) {
+  function syncGameFromBoard(side) {
     const fen = board.fen();
-    const side = sideToMove || "w";
-    const castle = buildCastlingString();
-    const fullFen = `${fen} ${side} ${castle} - 0 1`;
+    const stm = side || "w";
+    const full = fen + " " + stm + " " + buildCastling() + " - 0 1";
     try {
-      game = new Chess(fullFen);
+      game = new Chess(full);
       fenInput.value = game.fen();
-    } catch (err) {
-      fenInput.value = fullFen;
+    } catch (_) {
+      fenInput.value = full;
     }
-    updateEvalBar(0);
   }
 
   syncGameFromBoard("w");
 
-  document.querySelectorAll(".castle-btn").forEach((btn) => {
+  document.querySelectorAll(".castle").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const key = btn.dataset.castle;
-      castling[key] = !castling[key];
-      btn.classList.toggle("active", castling[key]);
+      const k = btn.dataset.castle;
+      castling[k] = !castling[k];
+      btn.classList.toggle("active", castling[k]);
       syncGameFromBoard(game.turn());
     });
   });
@@ -118,49 +137,48 @@
   });
 
   $("btn-reset").addEventListener("click", () => {
-    board.position("start");
+    board.position("start", false);
     castling = { K: true, Q: true, k: true, q: true };
-    document.querySelectorAll(".castle-btn").forEach((b) => b.classList.add("active"));
+    document.querySelectorAll(".castle").forEach((b) => b.classList.add("active"));
     selectedPiece = null;
     document.querySelectorAll(".piece-tray img").forEach((i) => i.classList.remove("selected"));
     game = new Chess();
     fenInput.value = game.fen();
-    clearEngineOutput();
-    updateEvalBar(0);
+    clearOut();
+    setEval(0);
   });
 
   $("btn-clear").addEventListener("click", () => {
-    board.position({});
+    board.position({}, false);
     selectedPiece = null;
     document.querySelectorAll(".piece-tray img").forEach((i) => i.classList.remove("selected"));
     syncGameFromBoard("w");
-    clearEngineOutput();
-    updateEvalBar(0);
+    clearOut();
+    setEval(0);
   });
 
   $("btn-copy-fen").addEventListener("click", () => {
-    fenInput.select();
     navigator.clipboard.writeText(fenInput.value).then(() => {
-      const btn = $("btn-copy-fen");
-      const old = btn.textContent;
-      btn.textContent = "Copied";
-      setTimeout(() => (btn.textContent = old), 1200);
+      const b = $("btn-copy-fen");
+      const t = b.textContent;
+      b.textContent = "Copied";
+      setTimeout(() => (b.textContent = t), 1000);
     });
   });
 
-  function clearEngineOutput() {
+  function clearOut() {
     engineStatus.textContent = "Ready";
     bestMoveEl.textContent = "";
     pvEl.textContent = "";
     depthInfo.textContent = "";
   }
 
-  function updateEvalBar(cp) {
-    let pct = 50 + (cp / 20);
-    pct = Math.max(2, Math.min(98, pct));
+  function setEval(cp) {
+    let pct = 50 + cp / 20;
+    pct = Math.max(3, Math.min(97, pct));
     evalFill.style.height = pct + "%";
     let label;
-    if (Math.abs(cp) > 900) label = cp > 0 ? "M" : "-M";
+    if (Math.abs(cp) >= 900) label = cp > 0 ? "M" : "-M";
     else {
       label = (cp / 100).toFixed(1);
       if (cp > 0) label = "+" + label;
@@ -174,27 +192,26 @@
       try {
         engine = new Worker("stockfish-19-lite-single.js");
       } catch (e) {
-        engineStatus.textContent = "Failed to load engine worker";
+        engineStatus.textContent = "Worker failed to load";
         reject(e);
         return;
       }
       let ready = false;
-      engine.onmessage = function (e) {
+      engine.onmessage = (e) => {
         const line = e.data;
         if (typeof line !== "string") return;
         if (line === "uciok") engine.postMessage("isready");
         else if (line === "readyok") {
           ready = true;
-          engineStatus.textContent = "Engine ready (Stockfish 19)";
+          engineStatus.textContent = "Engine ready";
           resolve(engine);
         } else if (line.startsWith("info") && analysing) parseInfo(line);
         else if (line.startsWith("bestmove") && analysing) {
           analysing = false;
-          const parts = line.split(" ");
-          const move = parts[1];
+          const move = line.split(" ")[1];
           if (move && move !== "(none)") {
-            bestMoveEl.textContent = formatMove(move);
-            engineStatus.textContent = "Best move found";
+            bestMoveEl.textContent = fmt(move);
+            engineStatus.textContent = "Best move";
           } else {
             bestMoveEl.textContent = "—";
             engineStatus.textContent = "No legal moves";
@@ -203,49 +220,63 @@
           btnBlack.disabled = false;
         }
       };
-      engine.onerror = function (err) {
-        console.error(err);
-        engineStatus.textContent = "Engine error – check console";
+      engine.onerror = (err) => {
+        engineStatus.textContent = "Engine error (missing .wasm?)";
         reject(err);
       };
       engine.postMessage("uci");
       setTimeout(() => {
-        if (!ready) engineStatus.textContent = "Engine taking long to start…";
-      }, 4000);
+        if (!ready) engineStatus.textContent = "Starting engine…";
+      }, 2500);
     });
   }
 
-  function formatMove(uci) {
-    if (!uci || uci.length < 4) return uci;
-    return uci.slice(0, 2) + " → " + uci.slice(2, 4) + (uci.length > 4 ? "=" + uci[4].toUpperCase() : "");
+  function fmt(uci) {
+    if (!uci || uci.length < 4) return uci || "";
+    return uci.slice(0, 2) + " → " + uci.slice(2, 4) + (uci[4] ? "=" + uci[4].toUpperCase() : "");
   }
 
   function parseInfo(line) {
-    const depthMatch = line.match(/\bdepth (\d+)/);
-    const scoreMatch = line.match(/\bscore (cp|mate) (-?\d+)/);
-    const pvMatch = line.match(/\bpv (.+)/);
-    const nodesMatch = line.match(/\bnodes (\d+)/);
-    if (depthMatch) {
-      depthInfo.textContent = `Depth ${depthMatch[1]}` + (nodesMatch ? ` · ${Number(nodesMatch[1]).toLocaleString()} nodes` : "");
+    const d = line.match(/\bdepth (\d+)/);
+    const s = line.match(/\bscore (cp|mate) (-?\d+)/);
+    const p = line.match(/\bpv (.+)/);
+    const n = line.match(/\bnodes (\d+)/);
+    if (d) {
+      depthInfo.textContent =
+        "Depth " + d[1] + (n ? " · " + Number(n[1]).toLocaleString() + " nodes" : "");
     }
-    if (scoreMatch) {
-      let cp = scoreMatch[1] === "cp" ? parseInt(scoreMatch[2], 10) : (parseInt(scoreMatch[2], 10) > 0 ? 10000 : -10000);
+    if (s) {
+      let cp =
+        s[1] === "cp"
+          ? parseInt(s[2], 10)
+          : parseInt(s[2], 10) > 0
+            ? 10000
+            : -10000;
       if (game.turn() === "b") cp = -cp;
-      updateEvalBar(cp);
+      setEval(cp);
     }
-    if (pvMatch) {
-      pvEl.textContent = pvMatch[1].trim().split(/\s+/).slice(0, 8).map(formatMove).join("  ");
+    if (p) {
+      pvEl.textContent = p[1]
+        .trim()
+        .split(/\s+/)
+        .slice(0, 10)
+        .map(fmt)
+        .join("  ");
     }
   }
 
-  async function runAnalysis(side) {
+  async function analyse(side) {
     if (analysing) return;
-    try { await initEngine(); } catch (e) { return; }
-    const pos = board.fen();
-    const castle = buildCastlingString();
-    const fullFen = `${pos} ${side} ${castle} - 0 1`;
-    try { game = new Chess(fullFen); } catch (err) {
-      engineStatus.textContent = "Invalid position – fix pieces/kings";
+    try {
+      await initEngine();
+    } catch (_) {
+      return;
+    }
+    const full = board.fen() + " " + side + " " + buildCastling() + " - 0 1";
+    try {
+      game = new Chess(full);
+    } catch (_) {
+      engineStatus.textContent = "Invalid position";
       return;
     }
     fenInput.value = game.fen();
@@ -257,15 +288,16 @@
     analysing = true;
     btnWhite.disabled = true;
     btnBlack.disabled = true;
-    clearEngineOutput();
+    clearOut();
     engineStatus.textContent = "Analysing…";
     engine.postMessage("stop");
     engine.postMessage("ucinewgame");
-    engine.postMessage("position fen " + fullFen);
+    engine.postMessage("position fen " + full);
     engine.postMessage("go depth 18");
   }
 
-  btnWhite.addEventListener("click", () => runAnalysis("w"));
-  btnBlack.addEventListener("click", () => runAnalysis("b"));
+  btnWhite.addEventListener("click", () => analyse("w"));
+  btnBlack.addEventListener("click", () => analyse("b"));
+
   initEngine().catch(() => {});
 })();
