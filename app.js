@@ -49,7 +49,7 @@
       img.dataset.piece = p;
       img.draggable = true;
       img.addEventListener("click", () => {
-        document.querySelectorAll(".piece-tray img").forEach((i) => i.classList.remove("selected"));
+        document.querySelectorAll(".tray img").forEach((i) => i.classList.remove("selected"));
         if (selectedPiece === p) {
           selectedPiece = null;
           return;
@@ -95,7 +95,7 @@
   });
 
   function sizeArrowLayer() {
-    const stage = document.querySelector(".board-stage");
+    const stage = document.querySelector(".board-frame");
     if (!stage) return;
     const s = stage.getBoundingClientRect().width;
     arrowLayer.setAttribute("viewBox", "0 0 " + s + " " + s);
@@ -125,7 +125,7 @@
   function squareCenter(sq) {
     const file = FILES.indexOf(sq[0]);
     const rank = parseInt(sq[1], 10) - 1;
-    const stage = document.querySelector(".board-stage");
+    const stage = document.querySelector(".board-frame");
     const size = stage.getBoundingClientRect().width;
     const cell = size / 8;
     let x, y;
@@ -164,7 +164,7 @@
     marker.setAttribute("orient", "auto");
     const tip = document.createElementNS("http://www.w3.org/2000/svg", "path");
     tip.setAttribute("d", "M0,0 L5,2.5 L0,5 Z");
-    tip.setAttribute("fill", "#f5c542");
+    tip.setAttribute("fill", "#81b64c");
     tip.setAttribute("opacity", "0.95");
     marker.appendChild(tip);
     defs.appendChild(marker);
@@ -184,7 +184,7 @@
     glow.setAttribute("y1", sy);
     glow.setAttribute("x2", ex);
     glow.setAttribute("y2", ey);
-    glow.setAttribute("stroke", "#f5c542");
+    glow.setAttribute("stroke", "#81b64c");
     glow.setAttribute("stroke-width", String(a.cell * 0.22));
     glow.setAttribute("stroke-linecap", "round");
     glow.setAttribute("opacity", "0.25");
@@ -195,7 +195,7 @@
     line.setAttribute("y1", sy);
     line.setAttribute("x2", ex);
     line.setAttribute("y2", ey);
-    line.setAttribute("stroke", "#f5c542");
+    line.setAttribute("stroke", "#81b64c");
     line.setAttribute("stroke-width", String(a.cell * 0.12));
     line.setAttribute("stroke-linecap", "round");
     line.setAttribute("marker-end", "url(#arrowhead)");
@@ -206,7 +206,7 @@
     circ.setAttribute("cx", a.x);
     circ.setAttribute("cy", a.y);
     circ.setAttribute("r", String(a.cell * 0.12));
-    circ.setAttribute("fill", "#f5c542");
+    circ.setAttribute("fill", "#81b64c");
     circ.setAttribute("opacity", "0.55");
     arrowLayer.appendChild(circ);
 
@@ -240,7 +240,7 @@
     btn.addEventListener("click", () => {
       const k = btn.dataset.castle;
       castling[k] = !castling[k];
-      btn.classList.toggle("active", castling[k]);
+      btn.classList.toggle("on", castling[k]);
       syncGameFromBoard(game.turn());
     });
   });
@@ -254,9 +254,9 @@
   $("btn-reset").addEventListener("click", () => {
     board.position("start", false);
     castling = { K: true, Q: true, k: true, q: true };
-    document.querySelectorAll(".castle").forEach((b) => b.classList.add("active"));
+    document.querySelectorAll(".castle").forEach((b) => b.classList.add("on"));
     selectedPiece = null;
-    document.querySelectorAll(".piece-tray img").forEach((i) => i.classList.remove("selected"));
+    document.querySelectorAll(".tray img").forEach((i) => i.classList.remove("selected"));
     game = new Chess();
     fenInput.value = game.fen();
     clearOut();
@@ -267,7 +267,7 @@
   $("btn-clear").addEventListener("click", () => {
     board.position({}, false);
     selectedPiece = null;
-    document.querySelectorAll(".piece-tray img").forEach((i) => i.classList.remove("selected"));
+    document.querySelectorAll(".tray img").forEach((i) => i.classList.remove("selected"));
     syncGameFromBoard("w");
     clearOut();
     setEval(0);
