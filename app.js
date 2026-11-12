@@ -8,8 +8,8 @@
   let castling = { K: true, Q: true, k: true, q: true };
   let engine = null;
   let analysing = false;
-  let syncTimer = null;
   let lastBestUci = null;
+  let pendingFreeEdit = false;
 
   const $ = (id) => document.getElementById(id);
   const fenInput = $("fen-input");
@@ -41,6 +41,7 @@
 
   function buildTray(id, pieces) {
     const el = $(id);
+    if (!el) return;
     el.innerHTML = "";
     pieces.forEach((p) => {
       const img = document.createElement("img");
@@ -48,7 +49,8 @@
       img.alt = p;
       img.dataset.piece = p;
       img.draggable = true;
-      img.addEventListener("click", () => {
+      img.addEventListener("click", (e) => {
+        e.stopPropagation();
         document.querySelectorAll(".tray img").forEach((i) => i.classList.remove("selected"));
         if (selectedPiece === p) {
           selectedPiece = null;
@@ -61,6 +63,7 @@
         selectedPiece = p;
         e.dataTransfer.setData("text/plain", p);
         e.dataTransfer.effectAllowed = "copy";
+        img.classList.add("selected");
       });
       el.appendChild(img);
     });
@@ -68,6 +71,54 @@
 
   buildTray("tray-top", BLACK);
   buildTray("tray-bottom", WHITE);
+
+  function buildCastling() {
+    let s = "";
+    if (castling.K) s += "K";
+    if (castling.Q) s += "Q";
+    if (castling.k) s += "k";
+    if (castling.q) s += "q";
+    return s || "-";
+  }
+
+  function updateCastlingFromGame() {
+    const rights = game.fen().split(" ")[2] || "-";
+    castling = {
+      K: rights.includes("K"),
+      Q: rights.includes("Q"),
+      k: rights.includes("k"),
+      q: rights.includes("q"),
+    };
+    document.querySelectorAll(".castle").forEach((btn) => {
+      const key = btn.dataset.castle;
+      btn.classList.toggle("on", !!castling[key]);
+    });
+  }
+
+  function syncGameFromBoard(side) {
+    const fen = board.fen();
+    const stm = side || game.turn() || "w";
+    const full = fen + " " + stm + " " + buildCastling() + " - 0 1";
+    try {
+      game = new Chess(full);
+      fenInput.value = game.fen();
+      updateCastlingFromGame();
+    } catch (_) {
+      fenInput.value = full;
+    }
+  }
+
+  function placePiece(sq, piece) {
+    if (!sq || !piece) return;
+    const pos = board.position();
+    if (pos[sq] === piece) delete pos[sq];
+    else pos[sq] = piece;
+    board.position(pos, false);
+    selectedPiece = null;
+    document.querySelectorAll(".tray img").forEach((i) => i.classList.remove("selected"));
+    clearArrows();
+    syncGameFromBoard(game.turn());
+  }
 
   board = Chessboard("board", {
     position: "start",
@@ -85,18 +136,81 @@
       clearArrows();
       return true;
     },
-    onDrop: function () {
+    onDrop: function (source, target) {
+      if (!target || target === "offboard") {
+        pendingFreeEdit = true;
+        return;
+      }
+      if (source === target) return "snapback";
+
+      const legal = game.move({ from: source, to: target, promotion: "q" });
+      if (legal) {
+        pendingFreeEdit = false;
+        fenInput.value = game.fen();
+        updateCastlingFromGame();
+        clearArrows();
+        return;
+      }
+
+      pendingFreeEdit = true;
       return true;
     },
     onSnapEnd: function () {
-      clearTimeout(syncTimer);
-      syncTimer = setTimeout(() => syncGameFromBoard(), 20);
+      if (pendingFreeEdit) {
+        pendingFreeEdit = false;
+        syncGameFromBoard(game.turn());
+      } else {
+        board.position(game.fen(), false);
+        fenInput.value = game.fen();
+      }
     },
+  });
+
+  const boardEl = document.getElementById("board");
+
+  boardEl.addEventListener("click", (e) => {
+    if (!selectedPiece) return;
+    let sqEl = e.target.closest("[data-square]");
+    if (!sqEl) {
+      const cell = e.target.closest(".square-55d63");
+      if (cell) sqEl = cell;
+    }
+    if (!sqEl) return;
+    const sq = sqEl.getAttribute("data-square");
+    if (!sq) return;
+    e.preventDefault();
+    e.stopPropagation();
+    placePiece(sq, selectedPiece);
+  });
+
+  boardEl.addEventListener("dragover", (e) => {
+    if (!selectedPiece) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  });
+
+  boardEl.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const piece = e.dataTransfer.getData("text/plain") || selectedPiece;
+    if (!piece) return;
+    const els = document.elementsFromPoint(e.clientX, e.clientY);
+    let sq = null;
+    for (const el of els) {
+      if (el.getAttribute && el.getAttribute("data-square")) {
+        sq = el.getAttribute("data-square");
+        break;
+      }
+      if (el.classList && el.classList.contains("square-55d63")) {
+        sq = el.getAttribute("data-square");
+        if (sq) break;
+      }
+    }
+    if (sq) placePiece(sq, piece);
   });
 
   function sizeArrowLayer() {
     const stage = document.querySelector(".board-frame");
-    if (!stage) return;
+    if (!stage || !arrowLayer) return;
     const s = stage.getBoundingClientRect().width;
     arrowLayer.setAttribute("viewBox", "0 0 " + s + " " + s);
     arrowLayer.style.width = s + "px";
@@ -106,20 +220,6 @@
   window.addEventListener("resize", () => {
     sizeArrowLayer();
     if (lastBestUci) drawArrow(lastBestUci);
-  });
-
-  document.getElementById("board").addEventListener("click", (e) => {
-    if (!selectedPiece) return;
-    const sqEl = e.target.closest("[data-square]");
-    if (!sqEl) return;
-    const sq = sqEl.getAttribute("data-square");
-    if (!sq) return;
-    const pos = board.position();
-    if (pos[sq] === selectedPiece) delete pos[sq];
-    else pos[sq] = selectedPiece;
-    board.position(pos, false);
-    clearArrows();
-    syncGameFromBoard();
   });
 
   function squareCenter(sq) {
@@ -140,7 +240,7 @@
   }
 
   function clearArrows() {
-    arrowLayer.innerHTML = "";
+    if (arrowLayer) arrowLayer.innerHTML = "";
     lastBestUci = null;
   }
 
@@ -148,12 +248,10 @@
     clearArrows();
     if (!uci || uci.length < 4 || uci === "(none)") return;
     lastBestUci = uci;
-
     const from = uci.slice(0, 2);
     const to = uci.slice(2, 4);
     const a = squareCenter(from);
     const b = squareCenter(to);
-
     const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
     marker.setAttribute("id", "arrowhead");
@@ -169,7 +267,6 @@
     marker.appendChild(tip);
     defs.appendChild(marker);
     arrowLayer.appendChild(defs);
-
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     const len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -178,7 +275,6 @@
     const sy = a.y + (dy / len) * shrink;
     const ex = b.x - (dx / len) * shrink;
     const ey = b.y - (dy / len) * shrink;
-
     const glow = document.createElementNS("http://www.w3.org/2000/svg", "line");
     glow.setAttribute("x1", sx);
     glow.setAttribute("y1", sy);
@@ -189,7 +285,6 @@
     glow.setAttribute("stroke-linecap", "round");
     glow.setAttribute("opacity", "0.25");
     arrowLayer.appendChild(glow);
-
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("x1", sx);
     line.setAttribute("y1", sy);
@@ -201,7 +296,6 @@
     line.setAttribute("marker-end", "url(#arrowhead)");
     line.setAttribute("opacity", "0.95");
     arrowLayer.appendChild(line);
-
     const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     circ.setAttribute("cx", a.x);
     circ.setAttribute("cy", a.y);
@@ -209,32 +303,10 @@
     circ.setAttribute("fill", "#81b64c");
     circ.setAttribute("opacity", "0.55");
     arrowLayer.appendChild(circ);
-
     sizeArrowLayer();
   }
 
-  function buildCastling() {
-    let s = "";
-    if (castling.K) s += "K";
-    if (castling.Q) s += "Q";
-    if (castling.k) s += "k";
-    if (castling.q) s += "q";
-    return s || "-";
-  }
-
-  function syncGameFromBoard(side) {
-    const fen = board.fen();
-    const stm = side || "w";
-    const full = fen + " " + stm + " " + buildCastling() + " - 0 1";
-    try {
-      game = new Chess(full);
-      fenInput.value = game.fen();
-    } catch (_) {
-      fenInput.value = full;
-    }
-  }
-
-  syncGameFromBoard("w");
+  fenInput.value = game.fen();
 
   document.querySelectorAll(".castle").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -252,12 +324,12 @@
   });
 
   $("btn-reset").addEventListener("click", () => {
+    game = new Chess();
     board.position("start", false);
     castling = { K: true, Q: true, k: true, q: true };
     document.querySelectorAll(".castle").forEach((b) => b.classList.add("on"));
     selectedPiece = null;
     document.querySelectorAll(".tray img").forEach((i) => i.classList.remove("selected"));
-    game = new Chess();
     fenInput.value = game.fen();
     clearOut();
     setEval(0);
