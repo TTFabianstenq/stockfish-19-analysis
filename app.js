@@ -28,9 +28,17 @@
     bK: "bk", bQ: "bq", bR: "br", bB: "bb", bN: "bn", bP: "bp",
   };
   function theme(piece) {
+    if (window.__sfActivePieces === "vice" && window.__sfVicePieces) {
+      const key = MAP[piece];
+      if (window.__sfVicePieces[key]) return window.__sfVicePieces[key];
+    }
     const base =
       (window.__sfGetPieceBase && window.__sfGetPieceBase()) ||
       "https://images.chesscomfiles.com/chess-themes/pieces/neo/150/";
+    if (base === "vice://" && window.__sfVicePieces) {
+      const key = MAP[piece];
+      if (window.__sfVicePieces[key]) return window.__sfVicePieces[key];
+    }
     return base + MAP[piece] + ".png";
   }
 
