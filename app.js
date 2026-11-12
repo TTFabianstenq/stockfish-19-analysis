@@ -27,8 +27,12 @@
     wK: "wk", wQ: "wq", wR: "wr", wB: "wb", wN: "wn", wP: "wp",
     bK: "bk", bQ: "bq", bR: "br", bB: "bb", bN: "bn", bP: "bp",
   };
-  const theme = (piece) =>
-    "https://images.chesscomfiles.com/chess-themes/pieces/neo/150/" + MAP[piece] + ".png";
+  function theme(piece) {
+    const base =
+      (window.__sfGetPieceBase && window.__sfGetPieceBase()) ||
+      "https://images.chesscomfiles.com/chess-themes/pieces/neo/150/";
+    return base + MAP[piece] + ".png";
+  }
 
   const WHITE = ["wK", "wQ", "wR", "wB", "wN", "wP"];
   const BLACK = ["bK", "bQ", "bR", "bB", "bN", "bP"];
@@ -143,7 +147,6 @@
       }
       if (source === target) return "snapback";
 
-      // Analysis board: side-to-move follows the piece you drag
       if (piece && (piece[0] === "w" || piece[0] === "b")) {
         const parts = game.fen().split(" ");
         parts[1] = piece[0];
@@ -169,7 +172,6 @@
         return;
       }
 
-      // Failed king two-square move = illegal castle → snap back
       if (piece === "wK" || piece === "bK") {
         const ff = source.charCodeAt(0);
         const tf = target.charCodeAt(0);
@@ -517,6 +519,86 @@
 
   btnWhite.addEventListener("click", () => analyse("w"));
   btnBlack.addEventListener("click", () => analyse("b"));
+
+  window.__sfBoardReload = function () {
+    const pos = board.position();
+    const orient = orientation;
+    document.getElementById("board").innerHTML = "";
+    board = Chessboard("board", {
+      position: pos,
+      orientation: orient,
+      draggable: true,
+      dropOffBoard: "trash",
+      sparePieces: false,
+      pieceTheme: theme,
+      appearSpeed: 0,
+      moveSpeed: 0,
+      snapbackSpeed: 0,
+      snapSpeed: 0,
+      trashSpeed: 0,
+      onDragStart: function () {
+        clearArrows();
+        return true;
+      },
+      onDrop: function (source, target, piece) {
+        if (!target || target === "offboard") {
+          pendingFreeEdit = true;
+          return;
+        }
+        if (source === target) return "snapback";
+        if (piece && (piece[0] === "w" || piece[0] === "b")) {
+          const parts = game.fen().split(" ");
+          parts[1] = piece[0];
+          parts[2] = buildCastling();
+          parts[3] = "-";
+          try {
+            game.load(parts.join(" "));
+          } catch (err) {}
+        }
+        const legal = game.move({
+          from: source,
+          to: target,
+          promotion: "q",
+        });
+        if (legal) {
+          pendingFreeEdit = false;
+          board.position(game.fen(), false);
+          fenInput.value = game.fen();
+          updateCastlingFromGame();
+          clearArrows();
+          return;
+        }
+        if (piece === "wK" || piece === "bK") {
+          const ff = source.charCodeAt(0);
+          const tf = target.charCodeAt(0);
+          if (Math.abs(ff - tf) === 2) {
+            return "snapback";
+          }
+        }
+        pendingFreeEdit = true;
+        return true;
+      },
+      onSnapEnd: function () {
+        if (pendingFreeEdit) {
+          pendingFreeEdit = false;
+          syncGameFromBoard(game.turn());
+        } else {
+          board.position(game.fen(), false);
+          fenInput.value = game.fen();
+        }
+      },
+    });
+    buildTray("tray-top", BLACK);
+    buildTray("tray-bottom", WHITE);
+    sizeArrowLayer();
+    if (lastBestUci) drawArrow(lastBestUci);
+  };
+
+  setTimeout(function () {
+    if (window.__sfActivePieces && window.__sfActivePieces !== "neo") {
+      window.__sfBoardReload();
+    }
+  }, 50);
 
   initEngine().catch(() => {});
 })();
