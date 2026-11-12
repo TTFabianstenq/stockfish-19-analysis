@@ -9,6 +9,7 @@
   let engine = null;
   let analysing = false;
   let syncTimer = null;
+  let lastBestUci = null;
 
   const $ = (id) => document.getElementById(id);
   const fenInput = $("fen-input");
@@ -20,6 +21,7 @@
   const evalLabel = $("eval-label");
   const btnWhite = $("btn-white");
   const btnBlack = $("btn-black");
+  const arrowLayer = $("arrow-layer");
 
   const MAP = {
     wK: "wk", wQ: "wq", wR: "wr", wB: "wb", wN: "wn", wP: "wp",
@@ -30,6 +32,7 @@
 
   const WHITE = ["wK", "wQ", "wR", "wB", "wN", "wP"];
   const BLACK = ["bK", "bQ", "bR", "bB", "bN", "bP"];
+  const FILES = "abcdefgh";
 
   [...WHITE, ...BLACK].forEach((p) => {
     const img = new Image();
@@ -74,16 +77,35 @@
     sparePieces: false,
     pieceTheme: theme,
     appearSpeed: 0,
-    moveSpeed: 60,
-    snapbackSpeed: 80,
-    snapSpeed: 50,
-    trashSpeed: 40,
-    onDragStart: function () { return true; },
-    onDrop: function () { return true; },
+    moveSpeed: 0,
+    snapbackSpeed: 0,
+    snapSpeed: 0,
+    trashSpeed: 0,
+    onDragStart: function () {
+      clearArrows();
+      return true;
+    },
+    onDrop: function () {
+      return true;
+    },
     onSnapEnd: function () {
       clearTimeout(syncTimer);
-      syncTimer = setTimeout(() => syncGameFromBoard(), 30);
+      syncTimer = setTimeout(() => syncGameFromBoard(), 20);
     },
+  });
+
+  function sizeArrowLayer() {
+    const stage = document.querySelector(".board-stage");
+    if (!stage) return;
+    const s = stage.getBoundingClientRect().width;
+    arrowLayer.setAttribute("viewBox", "0 0 " + s + " " + s);
+    arrowLayer.style.width = s + "px";
+    arrowLayer.style.height = s + "px";
+  }
+  sizeArrowLayer();
+  window.addEventListener("resize", () => {
+    sizeArrowLayer();
+    if (lastBestUci) drawArrow(lastBestUci);
   });
 
   document.getElementById("board").addEventListener("click", (e) => {
@@ -96,8 +118,100 @@
     if (pos[sq] === selectedPiece) delete pos[sq];
     else pos[sq] = selectedPiece;
     board.position(pos, false);
+    clearArrows();
     syncGameFromBoard();
   });
+
+  function squareCenter(sq) {
+    const file = FILES.indexOf(sq[0]);
+    const rank = parseInt(sq[1], 10) - 1;
+    const stage = document.querySelector(".board-stage");
+    const size = stage.getBoundingClientRect().width;
+    const cell = size / 8;
+    let x, y;
+    if (orientation === "white") {
+      x = (file + 0.5) * cell;
+      y = (7 - rank + 0.5) * cell;
+    } else {
+      x = (7 - file + 0.5) * cell;
+      y = (rank + 0.5) * cell;
+    }
+    return { x, y, cell };
+  }
+
+  function clearArrows() {
+    arrowLayer.innerHTML = "";
+    lastBestUci = null;
+  }
+
+  function drawArrow(uci) {
+    clearArrows();
+    if (!uci || uci.length < 4 || uci === "(none)") return;
+    lastBestUci = uci;
+
+    const from = uci.slice(0, 2);
+    const to = uci.slice(2, 4);
+    const a = squareCenter(from);
+    const b = squareCenter(to);
+
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    marker.setAttribute("id", "arrowhead");
+    marker.setAttribute("markerWidth", "5");
+    marker.setAttribute("markerHeight", "5");
+    marker.setAttribute("refX", "4");
+    marker.setAttribute("refY", "2.5");
+    marker.setAttribute("orient", "auto");
+    const tip = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    tip.setAttribute("d", "M0,0 L5,2.5 L0,5 Z");
+    tip.setAttribute("fill", "#f5c542");
+    tip.setAttribute("opacity", "0.95");
+    marker.appendChild(tip);
+    defs.appendChild(marker);
+    arrowLayer.appendChild(defs);
+
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const shrink = a.cell * 0.18;
+    const sx = a.x + (dx / len) * shrink;
+    const sy = a.y + (dy / len) * shrink;
+    const ex = b.x - (dx / len) * shrink;
+    const ey = b.y - (dy / len) * shrink;
+
+    const glow = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    glow.setAttribute("x1", sx);
+    glow.setAttribute("y1", sy);
+    glow.setAttribute("x2", ex);
+    glow.setAttribute("y2", ey);
+    glow.setAttribute("stroke", "#f5c542");
+    glow.setAttribute("stroke-width", String(a.cell * 0.22));
+    glow.setAttribute("stroke-linecap", "round");
+    glow.setAttribute("opacity", "0.25");
+    arrowLayer.appendChild(glow);
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", sx);
+    line.setAttribute("y1", sy);
+    line.setAttribute("x2", ex);
+    line.setAttribute("y2", ey);
+    line.setAttribute("stroke", "#f5c542");
+    line.setAttribute("stroke-width", String(a.cell * 0.12));
+    line.setAttribute("stroke-linecap", "round");
+    line.setAttribute("marker-end", "url(#arrowhead)");
+    line.setAttribute("opacity", "0.95");
+    arrowLayer.appendChild(line);
+
+    const circ = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circ.setAttribute("cx", a.x);
+    circ.setAttribute("cy", a.y);
+    circ.setAttribute("r", String(a.cell * 0.12));
+    circ.setAttribute("fill", "#f5c542");
+    circ.setAttribute("opacity", "0.55");
+    arrowLayer.appendChild(circ);
+
+    sizeArrowLayer();
+  }
 
   function buildCastling() {
     let s = "";
@@ -134,6 +248,7 @@
   $("btn-flip").addEventListener("click", () => {
     orientation = orientation === "white" ? "black" : "white";
     board.orientation(orientation);
+    if (lastBestUci) drawArrow(lastBestUci);
   });
 
   $("btn-reset").addEventListener("click", () => {
@@ -146,6 +261,7 @@
     fenInput.value = game.fen();
     clearOut();
     setEval(0);
+    clearArrows();
   });
 
   $("btn-clear").addEventListener("click", () => {
@@ -155,6 +271,7 @@
     syncGameFromBoard("w");
     clearOut();
     setEval(0);
+    clearArrows();
   });
 
   $("btn-copy-fen").addEventListener("click", () => {
@@ -212,9 +329,11 @@
           if (move && move !== "(none)") {
             bestMoveEl.textContent = fmt(move);
             engineStatus.textContent = "Best move";
+            drawArrow(move);
           } else {
             bestMoveEl.textContent = "—";
             engineStatus.textContent = "No legal moves";
+            clearArrows();
           }
           btnWhite.disabled = false;
           btnBlack.disabled = false;
@@ -256,12 +375,12 @@
       setEval(cp);
     }
     if (p) {
-      pvEl.textContent = p[1]
-        .trim()
-        .split(/\s+/)
-        .slice(0, 10)
-        .map(fmt)
-        .join("  ");
+      const moves = p[1].trim().split(/\s+/);
+      if (moves[0] && moves[0].length >= 4) {
+        drawArrow(moves[0]);
+        bestMoveEl.textContent = fmt(moves[0]);
+      }
+      pvEl.textContent = moves.slice(0, 10).map(fmt).join("  ");
     }
   }
 
@@ -283,12 +402,14 @@
     if (game.game_over()) {
       engineStatus.textContent = game.in_checkmate() ? "Checkmate" : "Game over";
       bestMoveEl.textContent = "—";
+      clearArrows();
       return;
     }
     analysing = true;
     btnWhite.disabled = true;
     btnBlack.disabled = true;
     clearOut();
+    clearArrows();
     engineStatus.textContent = "Analysing…";
     engine.postMessage("stop");
     engine.postMessage("ucinewgame");
