@@ -136,20 +136,46 @@
       clearArrows();
       return true;
     },
-    onDrop: function (source, target) {
+    onDrop: function (source, target, piece) {
       if (!target || target === "offboard") {
         pendingFreeEdit = true;
         return;
       }
       if (source === target) return "snapback";
 
-      const legal = game.move({ from: source, to: target, promotion: "q" });
+      // Analysis board: side-to-move follows the piece you drag
+      if (piece && (piece[0] === "w" || piece[0] === "b")) {
+        const parts = game.fen().split(" ");
+        parts[1] = piece[0];
+        parts[2] = buildCastling();
+        parts[3] = "-";
+        try {
+          game.load(parts.join(" "));
+        } catch (err) {}
+      }
+
+      const legal = game.move({
+        from: source,
+        to: target,
+        promotion: "q",
+      });
+
       if (legal) {
         pendingFreeEdit = false;
+        board.position(game.fen(), false);
         fenInput.value = game.fen();
         updateCastlingFromGame();
         clearArrows();
         return;
+      }
+
+      // Failed king two-square move = illegal castle → snap back
+      if (piece === "wK" || piece === "bK") {
+        const ff = source.charCodeAt(0);
+        const tf = target.charCodeAt(0);
+        if (Math.abs(ff - tf) === 2) {
+          return "snapback";
+        }
       }
 
       pendingFreeEdit = true;
