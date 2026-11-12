@@ -66,6 +66,7 @@
             <button id="btn-reset" class="tool" type="button">Reset</button>
             <button id="btn-clear" class="tool" type="button">Clear</button>
           </div>
+          <button id="btn-themes" class="tool tool-wide" type="button">Themes &amp; Settings</button>
         </div>
 
         <div class="block">
@@ -81,6 +82,47 @@
           <div class="tray tray-inline" id="tray-bottom"></div>
         </div>
       </aside>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-panel" role="dialog" aria-labelledby="settings-title">
+      <div class="modal-head">
+        <div>
+          <h2 id="settings-title">Board &amp; Pieces</h2>
+          <p class="modal-sub">Customize the look of your board.</p>
+        </div>
+        <button type="button" class="modal-close" id="modal-close" aria-label="Close">×</button>
+      </div>
+
+      <div class="modal-tabs">
+        <button type="button" class="tab active" data-tab="boards">Boards</button>
+        <button type="button" class="tab" data-tab="pieces">Pieces</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-boards">
+        <div class="swatch-grid" id="board-swatches"></div>
+      </div>
+
+      <div class="tab-panel" id="tab-pieces">
+        <div class="piece-set-grid" id="piece-sets"></div>
+      </div>
+
+      <div class="modal-preview">
+        <div class="mini-board" id="mini-board">
+          <div class="mini-row"><div class="ms dark"></div><div class="ms light"></div><div class="ms dark"></div><div class="ms light"></div></div>
+          <div class="mini-row"><div class="ms light"></div><div class="ms dark"></div><div class="ms light"></div><div class="ms dark"></div></div>
+          <div class="mini-row"><div class="ms dark"></div><div class="ms light"></div><div class="ms dark"></div><div class="ms light"></div></div>
+          <div class="mini-row"><div class="ms light"></div><div class="ms dark"></div><div class="ms light"></div><div class="ms dark"></div></div>
+        </div>
+        <div class="preview-pieces" id="preview-pieces"></div>
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn-cancel" id="modal-cancel">Cancel</button>
+        <button type="button" class="btn-save" id="modal-save">Save</button>
+      </div>
     </div>
   </div>
 
