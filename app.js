@@ -1,6 +1,15 @@
 (function () {
   "use strict";
-  // RESTORED - if you see only this, restore failed
-  document.body.innerHTML = '<div style="padding:40px;font:16px system-ui;color:#f4f4f4;background:#0c0c0c">Restoring full app… please hard-refresh in a moment. If this persists, the last full build is on commit e6180c6.</div>';
-  location.replace('https://github.com/TTFabianstenq/stockfish-19-analysis/blob/e6180c6/app.js');
+  var s = document.createElement("script");
+  s.src = "https://cdn.jsdelivr.net/gh/TTFabianstenq/stockfish-19-analysis@e6180c6/app.js";
+  s.onerror = function () {
+    var s2 = document.createElement("script");
+    s2.src = "https://raw.githubusercontent.com/TTFabianstenq/stockfish-19-analysis/e6180c6/app.js";
+    s2.onerror = function () {
+      var f = document.getElementById("fatal");
+      if (f) { f.hidden = false; f.textContent = "Failed to load analysis app. Hard-refresh or try again."; }
+    };
+    document.body.appendChild(s2);
+  };
+  document.body.appendChild(s);
 })();
