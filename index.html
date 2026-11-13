@@ -3,91 +3,191 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stockfish 19 Analysis</title>
+  <title>Stockfish 19 Analysis – free chess engine in your browser</title>
+  <meta name="description" content="Analyse chess positions with Stockfish 19 right in your browser. Live multi-line evaluation, game review with accuracy and blunder detection, PGN and FEN import, and a position editor. Free, private, no sign-up." />
+  <meta name="theme-color" content="#121212" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Stockfish 19 Analysis" />
+  <meta property="og:description" content="Free Stockfish 19 chess analysis board that runs entirely in your browser: live evaluation, multi-line analysis, game review, PGN/FEN import." />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="preconnect" href="https://images.chesscomfiles.com" crossorigin />
 </head>
 <body>
+  <div id="fatal" class="fatal" role="alert" hidden></div>
+  <noscript><div class="fatal">Stockfish 19 Analysis needs JavaScript to run the engine in your browser.</div></noscript>
+
   <div class="shell">
     <header class="top">
       <div class="brand">
-        <span class="logo">♞</span>
+        <img class="logo" src="icon.svg" alt="" width="54" height="54" />
         <div>
-          <div class="title">Stockfish 19</div>
-          <div class="sub">Board analysis</div>
+          <h1 class="title">Stockfish 19 <span>Analysis</span></h1>
+          <p class="sub">Free engine · runs on your device · no sign-up</p>
         </div>
       </div>
-      <div class="tray" id="tray-top"></div>
+      <div class="top-actions">
+        <button id="btn-share" class="tool" type="button" title="Copy a link to this position">Share position</button>
+        <button id="btn-themes" class="tool" type="button">⚙ Themes</button>
+      </div>
     </header>
 
-    <div class="layout">
-      <div class="board-side">
-        <div class="eval-col">
-          <div class="eval-bar" id="eval-bar">
-            <div class="eval-fill" id="eval-fill"></div>
-            <span class="eval-label" id="eval-label">0.0</span>
+    <main class="layout">
+      <section class="board-col" id="board-col" aria-label="Chess board">
+        <div class="player-bar" id="bar-top"><span class="dot" id="dot-top"></span><span id="name-top">Black</span></div>
+
+        <div class="board-row">
+          <div class="eval-col">
+            <div class="eval-bar" id="eval-bar" role="img" aria-label="Evaluation bar">
+              <div class="eval-fill" id="eval-fill"></div>
+              <span class="eval-label" id="eval-label">–</span>
+            </div>
+          </div>
+          <div class="board-frame" id="board-frame">
+            <div id="board"></div>
+            <svg id="arrow-layer" class="arrow-layer" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
+            <div id="promo" class="promo" role="dialog" aria-label="Choose promotion piece" hidden></div>
           </div>
         </div>
-        <div class="board-frame">
-          <div id="board"></div>
-          <svg id="arrow-layer" class="arrow-layer" xmlns="http://www.w3.org/2000/svg"></svg>
+
+        <div class="player-bar" id="bar-bottom"><span class="dot" id="dot-bottom"></span><span id="name-bottom">White</span></div>
+
+        <div class="nav" role="toolbar" aria-label="Move navigation">
+          <button id="nav-first" class="tool" type="button" aria-label="First position" title="First position (Home)">«</button>
+          <button id="nav-prev" class="tool" type="button" aria-label="Previous move" title="Previous move (←)">‹</button>
+          <button id="nav-next" class="tool" type="button" aria-label="Next move" title="Next move (→)">›</button>
+          <button id="nav-last" class="tool" type="button" aria-label="Last position" title="Last position (End)">»</button>
+          <button id="btn-flip" class="tool nav-flip" type="button" title="Flip board (F)">Flip board</button>
         </div>
-      </div>
+
+        <div class="graph-card" id="graph-card" hidden>
+          <div class="row-label">Evaluation over the game <span class="graph-hint">(click to jump)</span></div>
+          <svg id="graph" class="graph" viewBox="0 0 800 140" preserveAspectRatio="none" role="img" aria-label="Evaluation graph"></svg>
+        </div>
+
+        <p class="hint"><kbd>←</kbd> <kbd>→</kbd> move · <kbd>F</kbd> flip · <kbd>A</kbd> analysis on/off · <kbd>B</kbd> play best move · <kbd>E</kbd> edit position</p>
+      </section>
 
       <aside class="sidebar">
-        <div class="block engine">
+        <div class="block engine" id="engine-block">
           <div class="block-head">
-            <span>Analysis</span>
-            <span class="pill">SF 19</span>
+            <span class="head-title">Engine <span class="pill">SF 19</span></span>
+            <button id="btn-analysis" class="switch on" type="button" role="switch" aria-checked="true" aria-label="Live analysis">
+              <span class="knob"></span>
+            </button>
           </div>
-          <div class="side-btns">
-            <button id="btn-white" class="side-btn light" type="button">White to move</button>
-            <button id="btn-black" class="side-btn dark" type="button">Black to move</button>
+          <div class="wdl" id="wdl" hidden title="Win / draw / loss chances for White, from the engine's WDL model">
+            <span class="w" id="wdl-w"></span><span class="d" id="wdl-d"></span><span class="l" id="wdl-l"></span>
           </div>
-          <div class="result">
-            <div class="status" id="engine-status">Ready</div>
-            <div class="best" id="best-move"></div>
-            <div class="pv" id="pv"></div>
-            <div class="meta" id="depth-info"></div>
+          <div class="engine-status" id="engine-status" role="status" aria-live="polite">Loading engine…</div>
+          <div class="lines" id="lines"></div>
+          <div class="engine-meta" id="depth-info"></div>
+          <div class="engine-controls">
+            <label>Lines
+              <select id="sel-lines">
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option>
+              </select>
+            </label>
+            <label>Depth
+              <select id="sel-depth">
+                <option value="12">12</option><option value="16">16</option><option value="20">20</option>
+                <option value="24">24</option><option value="30">30</option><option value="0">∞</option>
+              </select>
+            </label>
+            <button id="btn-play-best" class="tool" type="button" title="Play the engine's best move (B)">Play best</button>
           </div>
         </div>
 
         <div class="block">
-          <div class="row-label">Castling</div>
-          <div class="castles">
-            <button class="castle on" data-castle="K" type="button">K</button>
-            <button class="castle on" data-castle="Q" type="button">Q</button>
-            <button class="castle on" data-castle="k" type="button">k</button>
-            <button class="castle on" data-castle="q" type="button">q</button>
+          <div class="block-head"><span>Moves</span><span class="result-tag" id="result-tag"></span></div>
+          <div class="moves" id="moves" role="list" aria-label="Move list"></div>
+        </div>
+
+        <div class="block">
+          <div class="row-label">Position</div>
+          <div class="fen-line">
+            <input id="fen-input" type="text" spellcheck="false" autocomplete="off" aria-label="FEN" />
+            <button id="btn-load-fen" class="tool" type="button">Load</button>
+            <button id="btn-copy-fen" class="tool" type="button">Copy</button>
           </div>
+          <div class="field-msg" id="fen-msg" role="alert"></div>
+
+          <div class="two-col">
+            <div>
+              <div class="row-label">Side to move</div>
+              <div class="seg" id="seg-turn">
+                <button type="button" data-turn="w">White</button>
+                <button type="button" data-turn="b">Black</button>
+              </div>
+            </div>
+            <div>
+              <div class="row-label">Castling</div>
+              <div class="castles">
+                <button class="castle" data-castle="K" type="button" aria-label="White kingside castling">K</button>
+                <button class="castle" data-castle="Q" type="button" aria-label="White queenside castling">Q</button>
+                <button class="castle" data-castle="k" type="button" aria-label="Black kingside castling">k</button>
+                <button class="castle" data-castle="q" type="button" aria-label="Black queenside castling">q</button>
+              </div>
+            </div>
+          </div>
+
           <div class="tools">
-            <button id="btn-flip" class="tool" type="button">Flip</button>
+            <button id="btn-edit" class="tool" type="button" aria-pressed="false">Edit position</button>
             <button id="btn-reset" class="tool" type="button">Reset</button>
             <button id="btn-clear" class="tool" type="button">Clear</button>
           </div>
-          <button id="btn-themes" class="tool tool-wide" type="button">⚙ Themes</button>
-        </div>
 
-        <div class="block">
-          <div class="row-label">FEN</div>
-          <div class="fen-line">
-            <input id="fen-input" type="text" readonly spellcheck="false" />
-            <button id="btn-copy-fen" class="tool" type="button">Copy</button>
+          <div class="editor" id="editor" hidden>
+            <div class="row-label">Click a piece, then click squares — or drag pieces onto the board. Drag a piece off the board to delete it.</div>
+            <div class="tray" id="tray-black"></div>
+            <div class="tray" id="tray-white"></div>
           </div>
         </div>
 
-        <div class="block tray-block">
-          <div class="row-label">White pieces</div>
-          <div class="tray tray-inline" id="tray-bottom"></div>
+        <div class="block">
+          <div class="row-label">Game</div>
+          <textarea id="pgn-input" rows="4" spellcheck="false" placeholder="Paste a PGN (or a FEN) here…" aria-label="PGN"></textarea>
+          <div class="tools two">
+            <button id="btn-load-pgn" class="tool" type="button">Load</button>
+            <button id="btn-copy-pgn" class="tool" type="button">Copy PGN</button>
+          </div>
+          <div class="field-msg" id="pgn-msg" role="alert"></div>
+
+          <div class="review">
+            <div class="review-row">
+              <button id="btn-review" class="tool primary" type="button">Review game</button>
+              <label>Depth
+                <select id="sel-review-depth">
+                  <option value="10">10</option><option value="12">12</option>
+                  <option value="14">14</option><option value="16">16</option>
+                </select>
+              </label>
+            </div>
+            <div class="progress" id="review-progress" hidden>
+              <div class="bar"><div class="bar-fill" id="review-fill"></div></div>
+              <span id="review-text"></span>
+              <button id="btn-review-cancel" class="tool" type="button">Cancel</button>
+            </div>
+            <div class="review-summary" id="review-summary" hidden></div>
+          </div>
         </div>
       </aside>
-    </div>
+    </main>
+
+    <footer class="foot">
+      Engine: <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js 19</a>
+      (lite, single-thread NNUE, GPLv3). Everything runs locally in your browser — nothing is uploaded.
+      <a href="https://github.com/TTFabianstenq/stockfish-19-analysis" target="_blank" rel="noopener">Source on GitHub</a>
+    </footer>
   </div>
 
   <div id="settings-modal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" id="modal-backdrop"></div>
-    <div class="modal-panel" role="dialog" aria-labelledby="settings-title">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <div class="modal-head">
         <div>
           <h2 id="settings-title">Board &amp; Pieces</h2>
@@ -126,11 +226,13 @@
     </div>
   </div>
 
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-  <script src="app.js"></script>
-  <script src="vice-pieces.js"></script>
-  <script src="themes.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js" defer></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js" defer></script>
+  <script src="vice-pieces.js" defer></script>
+  <script src="lib.js" defer></script>
+  <script src="engine.js" defer></script>
+  <script src="themes.js" defer></script>
+  <script src="app.js" defer></script>
 </body>
 </html>

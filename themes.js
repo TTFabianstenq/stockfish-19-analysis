@@ -177,6 +177,11 @@
       });
     });
 
+    document.addEventListener("keydown", (e) => {
+      const modal = $("settings-modal");
+      if (e.key === "Escape" && modal && !modal.classList.contains("hidden")) closeSettings(true);
+    });
+
     applyBoardTheme(activeTheme);
     window.__sfGetPieceBase = function () {
       const set = PIECE_SETS.find((s) => s.id === activePieces) || PIECE_SETS[0];
