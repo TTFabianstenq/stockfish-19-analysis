@@ -1,0 +1,13 @@
+{
+  "name": "stockfish-19-analysis",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Stockfish 19 chess analysis board that runs in the browser.",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
