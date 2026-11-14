@@ -5,7 +5,7 @@
  *  - the engine (.js/.wasm): cache first (large, and the filename is versioned)
  *  - third-party libraries and piece images: stale-while-revalidate
  */
-const CACHE = "sf19-v2";
+const CACHE = "sf19-v3";
 const CORE = [
   "./",
   "index.html",
