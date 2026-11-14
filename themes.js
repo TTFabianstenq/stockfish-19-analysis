@@ -2,7 +2,7 @@
   "use strict";
 
   const BOARD_THEMES = [
-    { id: "vice", name: "Vice City", light: "#e8f0f4", dark: "#4a9db5" },
+    { id: "vice", name: "Vice City", light: "#fbefe6", dark: "#4b8ba7" },
     { id: "classic", name: "Classic", light: "#f0d9b5", dark: "#b58863" },
     { id: "green", name: "Green", light: "#eeeed2", dark: "#769656" },
     { id: "blue", name: "Blue", light: "#eae9d2", dark: "#4b7399" },
@@ -49,6 +49,7 @@
     const t = BOARD_THEMES.find((x) => x.id === id) || BOARD_THEMES[1];
     document.documentElement.style.setProperty("--sq-light", t.light);
     document.documentElement.style.setProperty("--sq-dark", t.dark);
+    document.documentElement.dataset.board = t.id;
   }
 
   function renderSwatches() {

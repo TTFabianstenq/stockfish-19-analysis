@@ -181,7 +181,7 @@
     bK: "bk", bQ: "bq", bR: "br", bB: "bb", bN: "bn", bP: "bp",
   };
   function theme(piece) {
-    if (window.__sfActivePieces === "vice" && window.__sfVicePieces) {
+    if ((window.__sfActivePieces === "vice" || window.__sfPieceFallback) && window.__sfVicePieces) {
       const key = MAP[piece];
       if (window.__sfVicePieces[key]) return window.__sfVicePieces[key];
     }
@@ -194,6 +194,26 @@
     }
     return base + MAP[piece] + ".png";
   }
+
+  // If a remote piece set can't be fetched (offline, blocked CDN), fall back to the
+  // built-in set for this session so the board is never left without pieces.
+  document.addEventListener(
+    "error",
+    (e) => {
+      const t = e.target;
+      if (!t || t.tagName !== "IMG" || window.__sfPieceFallback) return;
+      if (!/images\.chesscomfiles\.com/.test(t.src || "") || !window.__sfVicePieces) return;
+      window.__sfPieceFallback = true;
+      if (window.__sfBoardReload) window.__sfBoardReload();
+      const n = document.createElement("div");
+      n.className = "toast";
+      n.setAttribute("role", "status");
+      n.textContent = "Couldn't load that piece set, so the built-in set is showing.";
+      document.body.appendChild(n);
+      setTimeout(() => n.remove(), 7000);
+    },
+    true
+  );
 
   const WHITE = ["wK", "wQ", "wR", "wB", "wN", "wP"];
   const BLACK = ["bK", "bQ", "bR", "bB", "bN", "bP"];

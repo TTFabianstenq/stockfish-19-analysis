@@ -13,7 +13,7 @@ Live site: https://stockfish-19-analysis.vercel.app
 - **Move list and navigation** with keyboard shortcuts (`←` `→` `Home` `End`)
 - **Position editor**: place or delete pieces, set side to move and castling rights; impossible positions get a clear message instead of a broken engine
 - Click-to-move, drag-to-move and tap-to-move, with a promotion chooser
-- 16 board colours and 7 piece sets, saved in your browser
+- 16 board colours and 7 piece sets, saved in your browser. Includes **Vice City**: a neon lagoon board with original art pieces (sunglasses pawns, seahorse knights) that are built in, so they work offline. If a remote piece set fails to load, the board falls back to it
 - Installable and works offline after the first visit (service worker)
 
 ## Keyboard shortcuts
